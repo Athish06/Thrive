@@ -1,4 +1,5 @@
 -- Database schema for ThrivePath authentication and user management
+-- Updated for Supabase compatibility
 
 -- Users table for authentication
 CREATE TABLE users (
@@ -13,19 +14,17 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Therapists table
+-- Therapists table (matching Supabase schema)
 CREATE TABLE therapists (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE NOT NULL,
-  first_name VARCHAR(100) NOT NULL,
-  last_name VARCHAR(100) NOT NULL,
+  first_name VARCHAR(255) NOT NULL,
+  last_name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
-  phone VARCHAR(20),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- These can be added later via profile completion
+  phone VARCHAR(255),
   bio TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
   CONSTRAINT fk_therapist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -35,16 +34,14 @@ CREATE TABLE therapists (
 CREATE TABLE parents (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT UNIQUE NOT NULL,
-  first_name VARCHAR(100) NOT NULL,
-  last_name VARCHAR(100) NOT NULL,
+  first_name VARCHAR(255) NOT NULL,
+  last_name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
-  phone VARCHAR(20),
+  phone VARCHAR(255),
   address TEXT,
   emergency_contact VARCHAR(255),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- These can be added later via profile completion
   is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
   CONSTRAINT fk_parent_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

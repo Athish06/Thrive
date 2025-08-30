@@ -5,9 +5,14 @@ from pydantic import BaseModel, EmailStr
 from users.users import create_user
 from authentication.authh import authenticate_user_detailed, create_access_token, get_current_user, update_last_login
 from users.profiles import get_therapist_profile, get_parent_profile, update_therapist_profile, update_parent_profile
-import psycopg2
+# import psycopg2  # Commented out - using Supabase now
 from typing import Optional
 from datetime import timedelta
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ThrivePath API", version="1.0.0")
 
@@ -130,14 +135,16 @@ async def login_user(user_credentials: UserLogin):
                 role=user["role"],
                 is_active=user["is_active"],
                 is_verified=user["is_verified"],
-                created_at=user.get("created_at", "").isoformat() if user.get("created_at") else ""
+                created_at=str(user.get("created_at", ""))
             )
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Login failed")
+        logger.error(f"Login error: {e}")
+        logger.error(f"User data: {user}")
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 @app.post("/api/register", response_model=UserResponse)
 async def register_user(user_data: UserRegistration):
@@ -167,16 +174,22 @@ async def register_user(user_data: UserRegistration):
             role=new_user["role"],
             is_active=new_user["is_active"],
             is_verified=new_user["is_verified"],
-            created_at=new_user["created_at"].isoformat()
+            created_at=str(new_user.get("created_at", ""))
         )
         
-    except psycopg2.IntegrityError as e:
-        if "unique constraint" in str(e).lower():
-            raise HTTPException(status_code=400, detail="Email already exists")
-        raise HTTPException(status_code=400, detail="Database error occurred")
+    # COMMENTED OUT: psycopg2 specific error handling - replaced with general exception handling
+    # except psycopg2.IntegrityError as e:
+    #     if "unique constraint" in str(e).lower():
+    #         raise HTTPException(status_code=400, detail="Email already exists")
+    #     raise HTTPException(status_code=400, detail="Database error occurred")
     except ValueError as e:
+        # This handles email already exists and other validation errors from Supabase
+        error_msg = str(e).lower()
+        if "already exists" in error_msg or "duplicate" in error_msg:
+            raise HTTPException(status_code=400, detail="Email already exists")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Registration error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/me", response_model=UserResponse)
@@ -205,7 +218,7 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         role=current_user["role"],
         is_active=current_user["is_active"],
         is_verified=current_user["is_verified"],
-        created_at=current_user.get("created_at", "").isoformat() if current_user.get("created_at") else "",
+        created_at=str(current_user.get("created_at", "")),
         name=profile_name or current_user["email"]  # Fallback to email if no profile name
     )
 
@@ -221,7 +234,7 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
                 raise HTTPException(status_code=404, detail="Therapist profile not found")
             return TherapistProfile(**{
                 **profile,
-                "created_at": profile["created_at"].isoformat() if profile["created_at"] else ""
+                "created_at": str(profile.get("created_at", ""))
             })
         elif current_user["role"] == "parent":
             profile = get_parent_profile(current_user["id"])
@@ -229,7 +242,7 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
                 raise HTTPException(status_code=404, detail="Parent profile not found")
             return ParentProfile(**{
                 **profile,
-                "created_at": profile["created_at"].isoformat() if profile["created_at"] else ""
+                "created_at": str(profile.get("created_at", ""))
             })
         else:
             raise HTTPException(status_code=400, detail="Invalid user role")
@@ -253,7 +266,7 @@ async def update_user_profile(
                 raise HTTPException(status_code=404, detail="Therapist profile not found")
             return TherapistProfile(**{
                 **updated_profile,
-                "created_at": updated_profile["created_at"].isoformat() if updated_profile["created_at"] else ""
+                "created_at": str(updated_profile.get("created_at", ""))
             })
         elif current_user["role"] == "parent":
             updated_profile = update_parent_profile(current_user["id"], **update_data)
@@ -261,7 +274,7 @@ async def update_user_profile(
                 raise HTTPException(status_code=404, detail="Parent profile not found")
             return ParentProfile(**{
                 **updated_profile,
-                "created_at": updated_profile["created_at"].isoformat() if updated_profile["created_at"] else ""
+                "created_at": str(updated_profile.get("created_at", ""))
             })
         else:
             raise HTTPException(status_code=400, detail="Invalid user role")
@@ -275,6 +288,42 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "ThrivePath API"}
+
+@app.get("/api/test-db")
+async def test_database_connection():
+    """Test Supabase database connection"""
+    try:
+        from db import test_connection
+        success, message = test_connection()
+        if success:
+            return {"status": "success", "message": message, "database": "Supabase PostgreSQL"}
+        else:
+            raise HTTPException(status_code=500, detail=f"Database connection failed: {message}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database test failed: {str(e)}")
+
+@app.get("/api/test-supabase")
+async def test_supabase_client():
+    """Test Supabase client connection"""
+    try:
+        from db import test_supabase_client, init_supabase_client
+        
+        # Try to initialize client first
+        client = init_supabase_client()
+        if not client:
+            return {
+                "status": "warning", 
+                "message": "Supabase client not available - please add SUPABASE_ANON_KEY to .env file",
+                "client": "Not initialized"
+            }
+        
+        success, message = test_supabase_client()
+        if success:
+            return {"status": "success", "message": message, "client": "Supabase Python Client"}
+        else:
+            return {"status": "error", "message": message, "client": "Supabase Python Client"}
+    except Exception as e:
+        return {"status": "error", "message": f"Supabase client test failed: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn

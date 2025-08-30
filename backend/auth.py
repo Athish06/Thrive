@@ -1,5 +1,5 @@
 import os
-import psycopg2
+# import psycopg2
 from dotenv import load_dotenv
 from users.profiles import get_therapist_profile, get_parent_profile
 import bcrypt
@@ -9,9 +9,11 @@ import jwt
 from jwt import PyJWTError
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from db import get_db_connection
+from db import get_supabase_client, format_supabase_response, handle_supabase_error
+import logging
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # JWT Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -24,31 +26,63 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
-    """Get user from database by email with profile data"""
-    conn = get_db_connection()
+    """Get user from database by email with profile data using Supabase"""
     try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, email, password_hash, role, is_active, is_verified, created_at FROM users WHERE email = %s",
-                (email,)
-            )
-            user = cur.fetchone()
+        client = get_supabase_client()
+        
+        # Get user data using Supabase
+        response = client.table('users').select('*').eq('email', email).execute()
+        handle_supabase_error(response)
+        
+        users = format_supabase_response(response)
+        if not users:
+            return None
             
-            if user:
-                # Get profile data based on role
-                if user["role"] == "therapist":
-                    profile = get_therapist_profile(user["id"])
-                elif user["role"] == "parent":
-                    profile = get_parent_profile(user["id"])
-                else:
-                    profile = None
-                
-                if profile:
-                    user["profile"] = profile
-            
-            return user
-    finally:
-        conn.close()
+        user = users[0]
+        
+        # Get profile data based on role
+        if user["role"] == "therapist":
+            profile = get_therapist_profile(user["id"])
+        elif user["role"] == "parent":
+            profile = get_parent_profile(user["id"])
+        else:
+            profile = None
+        
+        if profile:
+            user["profile"] = profile
+        
+        return user
+    except Exception as e:
+        logger.error(f"Error getting user by email {email}: {e}")
+        return None
+
+# COMMENTED OUT: Direct PostgreSQL version (keeping for reference)
+# def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+#     """Get user from database by email with profile data"""
+#     conn = get_db_connection()
+#     try:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 "SELECT id, email, password_hash, role, is_active, is_verified, created_at FROM users WHERE email = %s",
+#                 (email,)
+#             )
+#             user = cur.fetchone()
+#             
+#             if user:
+#                 # Get profile data based on role
+#                 if user["role"] == "therapist":
+#                     profile = get_therapist_profile(user["id"])
+#                 elif user["role"] == "parent":
+#                     profile = get_parent_profile(user["id"])
+#                 else:
+#                     profile = None
+#                 
+#                 if profile:
+#                     user["profile"] = profile
+#             
+#             return user
+#     finally:
+#         conn.close()
 
 def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
     user = get_user_by_email(email)
@@ -62,7 +96,7 @@ def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
 
 def authenticate_user_detailed(email: str, password: str) -> tuple[Optional[Dict[str, Any]], str]:
     """
-    Authenticate user with detailed error messages
+    Authenticate user with detailed error messages using Supabase
     Returns: (user_data, error_message)
     """
     user = get_user_by_email(email)
@@ -122,13 +156,28 @@ def get_current_user(token_data: Dict[str, Any] = Depends(verify_token)) -> Dict
     return user
 
 def update_last_login(user_id: int):
-    conn = get_db_connection()
+    """Update user's last login timestamp using Supabase"""
     try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE users SET last_login = NOW() WHERE id = %s",
-                (user_id,)
-            )
-        conn.commit()
-    finally:
-        conn.close()
+        client = get_supabase_client()
+        
+        response = client.table('users').update({
+            'last_login': datetime.utcnow().isoformat()
+        }).eq('id', user_id).execute()
+        
+        handle_supabase_error(response)
+        logger.info(f"Updated last login for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error updating last login for user {user_id}: {e}")
+
+# COMMENTED OUT: Direct PostgreSQL version (keeping for reference)
+# def update_last_login(user_id: int):
+#     conn = get_db_connection()
+#     try:
+#         with conn.cursor() as cur:
+#             cur.execute(
+#                 "UPDATE users SET last_login = NOW() WHERE id = %s",
+#                 (user_id,)
+#             )
+#         conn.commit()
+#     finally:
+#         conn.close()
