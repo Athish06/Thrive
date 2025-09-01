@@ -13,9 +13,10 @@ const TherapistDashboard: React.FC = () => {
     <div className="space-y-8">
       <Hero />
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <div className="xl:col-span-4 space-y-4">
+        <div className="xl:col-span-4 space-y-6">
           <QuickActions onOpenNotesViewer={() => setNotesViewerOpen(true)} />
-        </div>
+          <TodaysSessions />
+                  </div>
         <div className="xl:col-span-5">
           <Calendar />
         </div>
@@ -23,7 +24,6 @@ const TherapistDashboard: React.FC = () => {
           <RecentActivity />
         </div>
       </div>
-      <TodaysSessions />
       <NotesViewer open={notesViewerOpen} onOpenChange={setNotesViewerOpen} />
     </div>
   );

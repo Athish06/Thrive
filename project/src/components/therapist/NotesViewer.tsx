@@ -64,6 +64,13 @@ interface NotesViewerProps {
 export const NotesViewer: React.FC<NotesViewerProps> = ({ open, onOpenChange }) => {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
 
+  const highDensityDays = Object.keys(mockNotes)
+    .filter(dateStr => mockNotes[dateStr].length > 1)
+    .map(dateStr => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    });
+
   // Convert selected date to string for notes lookup
   const selectedDateStr = selectedDate ? 
     `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}` 
@@ -144,6 +151,10 @@ export const NotesViewer: React.FC<NotesViewerProps> = ({ open, onOpenChange }) 
                         selected={selectedDate}
                         onSelect={setSelectedDate}
                         className="rounded-md"
+                        modifiers={{ highDensity: highDensityDays }}
+                        modifiersClassNames={{
+                          highDensity: 'border-2 border-red-500 rounded-lg',
+                        }}
                         classNames={{
                           months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
                           month: 'space-y-4',

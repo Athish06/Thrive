@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Users, Target, StickyNote } from 'lucide-react';
+import { Users, Target, StickyNote, CalendarPlus } from 'lucide-react';
 
 interface QuickActionsProps {
   onOpenNotesViewer: () => void;
@@ -23,11 +23,11 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onOpenNotesViewer })
       action: () => console.log('Add learner'),
     },
     {
-      title: 'Quick Report',
-      description: 'Generate insights',
+      title: 'Add Session',
+      description: 'Schedule for any date',
       id: 5,
-      icon: <Target className="w-6 h-6" />,
-      action: () => console.log('Quick report'),
+      icon: <CalendarPlus className="w-6 h-6" />,
+      action: () => console.log('Add session for any date'),
     },
   ];
   return (
