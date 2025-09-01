@@ -8,13 +8,18 @@ import { Sun, Moon, Bell, Menu, Settings, LogOut, UserCircle, Palette } from 'lu
 import { useTheme } from '../../hooks/useTheme';
 import { Dropdown, DropdownItem, DropdownSeparator } from '../ui/dropdown';
 
-export const TopNavbar = () => {
+interface TopNavbarProps {
+  isProfileOpen: boolean;
+  onProfileToggle: (isOpen: boolean) => void;
+}
+
+export const TopNavbar: React.FC<TopNavbarProps> = ({ isProfileOpen, onProfileToggle }) => {
   const { isOpen: isSidebarOpen, toggleMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [hidden, setHidden] = React.useState(false);
-  const { scrollY } = useScroll();
+    const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
     const previous = scrollY.getPrevious();
@@ -79,9 +84,12 @@ export const TopNavbar = () => {
           <button className="p-2 rounded-full hover:bg-accent/20">
             <Bell size={20} />
           </button>
-          
+
+                    
           {/* Profile Dropdown */}
           <Dropdown 
+            isOpen={isProfileOpen}
+            onToggle={onProfileToggle}
             trigger={
               <motion.button
                 whileHover={{ scale: 1.05 }}

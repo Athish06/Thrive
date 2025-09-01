@@ -20,11 +20,12 @@ import { SessionPlanning } from './components/sessions/SessionPlanning';
 const DashboardLayout: React.FC = () => {
   const { user } = useAuth();
   const { isOpen } = useSidebar();
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar />
-      <TopNavbar />
+      <TopNavbar isProfileOpen={isProfileOpen} onProfileToggle={setIsProfileOpen} />
       <main className={cn(
         'transition-all duration-300',
         'pt-24 px-4',
@@ -34,7 +35,7 @@ const DashboardLayout: React.FC = () => {
           <Route 
             path="/dashboard" 
             element={
-              user?.role === 'therapist' ? <TherapistDashboard /> : <ParentDashboard />
+              user?.role === 'therapist' ? <TherapistDashboard isProfileOpen={isProfileOpen} /> : <ParentDashboard isProfileOpen={isProfileOpen} />
             } 
           />
           
@@ -61,7 +62,7 @@ const DashboardLayout: React.FC = () => {
             path="/child" 
             element={
               <ProtectedRoute requiredRole="parent">
-                <ParentDashboard />
+                <ParentDashboard isProfileOpen={isProfileOpen} />
               </ProtectedRoute>
             } 
           />

@@ -50,13 +50,35 @@
   }
 }
 
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @layer components {
   .glass-card {
-    @apply backdrop-blur-lg border border-border/50;
-    background-color: rgb(var(--surface) / 0.7);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   }
-  [data-theme="dark"] .glass-card {
-    background-color: rgb(var(--surface) / 0.5);
+
+  .dark .glass-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 

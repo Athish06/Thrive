@@ -1,7 +1,15 @@
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import SplitText from '../ui/SplitText';
+import { QuickActions } from './QuickActions';
 
-export const Hero = () => {
+
+interface HeroProps {
+  isProfileOpen: boolean;
+  onOpenNotesViewer: () => void;
+}
+
+export const Hero: React.FC<HeroProps> = ({ isProfileOpen, onOpenNotesViewer }) => {
   const { user } = useAuth();
 
   return (
@@ -11,11 +19,15 @@ export const Hero = () => {
       transition={{ delay: 0.2, duration: 0.6 }}
       className="relative p-6"
     >
-      <div className="relative">
-        <h1 className="text-4xl font-bold text-foreground">
-          Welcome back, {user?.name?.split(' ')[0] || 'Athish'}
-        </h1>
-      </div>
+      <div className="relative flex justify-between items-center">
+        <SplitText 
+          tag="h1"
+          text={`Welcome back, ${user?.name?.split(' ')[0] || 'Athish'}`}
+          className="text-4xl font-bold text-foreground"
+          textAlign="left"
+        />
+        {!isProfileOpen && <QuickActions onOpenNotesViewer={onOpenNotesViewer} />} 
+              </div>
     </motion.div>
   );
 };

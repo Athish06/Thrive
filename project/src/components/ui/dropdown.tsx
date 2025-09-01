@@ -7,27 +7,38 @@ interface DropdownProps {
   trigger: React.ReactNode;
   align?: 'left' | 'right';
   className?: string;
+  isOpen?: boolean;
+  onToggle?: (isOpen: boolean) => void;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({ 
   children, 
   trigger, 
   align = 'right',
-  className 
+  className,
+  isOpen: controlledIsOpen,
+  onToggle
 }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = onToggle || setInternalIsOpen;
+
+  const handleToggle = (open: boolean) => {
+    setIsOpen(open);
+    onToggle?.(open);
+  };
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        handleToggle(false);
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        handleToggle(false);
       }
     };
 
@@ -44,7 +55,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>
+      <div onClick={() => handleToggle(!isOpen)}>
         {trigger}
       </div>
       <AnimatePresence>
@@ -56,7 +67,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-40"
-              onClick={() => setIsOpen(false)}
+              onClick={() => handleToggle(false)}
             />
             
             {/* Dropdown */}

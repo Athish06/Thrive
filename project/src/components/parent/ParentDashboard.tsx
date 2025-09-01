@@ -3,7 +3,17 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { Calendar, Trophy, BookOpen, Target, Star, CheckCircle } from 'lucide-react';
 
-export const ParentDashboard: React.FC = () => {
+interface ParentDashboardProps {
+  isProfileOpen: boolean;
+}
+
+export const ParentDashboard: React.FC<ParentDashboardProps> = ({ isProfileOpen }) => {
+  // TODO: Use isProfileOpen to manage UI elements when needed
+  React.useEffect(() => {
+    if (isProfileOpen) {
+      console.log('Profile dropdown is open in ParentDashboard');
+    }
+  }, [isProfileOpen]);
   const { user } = useAuth();
   const { littleLearners, homework } = useData();
 

@@ -1,70 +1,84 @@
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Users, Target, StickyNote, CalendarPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, StickyNote, CalendarPlus } from 'lucide-react';
+import ConcentricCircleIcon from '../ui/ConcentricCircleIcon';
+import HorizontalDropdown from '../ui/HorizontalDropdown';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useTheme } from '../../hooks/useTheme';
 
 interface QuickActionsProps {
   onOpenNotesViewer: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ onOpenNotesViewer }) => {
-  const carouselItems = [
+      const { theme: appTheme } = useTheme();
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
+  
+  useEffect(() => {
+    if (appTheme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      setEffectiveTheme(systemTheme);
+
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        setEffectiveTheme(e.matches ? 'dark' : 'light');
+      };
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      setEffectiveTheme(appTheme);
+    }
+  }, [appTheme]);
+
+
+  const menuItems = [
     {
-      title: 'View Notes',
-      description: 'Review session notes',
-      id: 4,
-      icon: <StickyNote className="w-6 h-6" />,
+      label: 'View Notes',
       action: onOpenNotesViewer,
+      icon: <StickyNote className="w-5 h-5" />,
     },
     {
-      title: 'Add Learner',
-      description: 'Enroll participant',
-      id: 3,
-      icon: <Users className="w-6 h-6" />,
+      label: 'Add Learner',
       action: () => console.log('Add learner'),
+      icon: <Users className="w-5 h-5" />,
     },
     {
-      title: 'Add Session',
-      description: 'Schedule for any date',
-      id: 5,
-      icon: <CalendarPlus className="w-6 h-6" />,
+      label: 'Add Session',
       action: () => console.log('Add session for any date'),
+      icon: <CalendarPlus className="w-5 h-5" />,
     },
   ];
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -30 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.7, duration: 0.6 }}
-    >
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            <CardTitle>Quick Actions</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-3">
-            {carouselItems.map((item) => (
-              <motion.button
-                key={item.id}
-                whileHover={{ scale: 1.02, x: 5 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={item.action}
-                className="flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 hover:shadow-lg hover:border-violet-300 dark:hover:border-violet-500 transition-all duration-300 text-left"
-              >
-                <div className="flex-shrink-0 p-2 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 text-white">
-                  {item.icon}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800 dark:text-white text-sm">{item.title}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{item.description}</p>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+    <div className="relative flex items-center">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <HorizontalDropdown
+                items={menuItems}
+                theme={effectiveTheme}
+                button={
+                  <button className="group p-3 rounded-full transition-all duration-200 hover:scale-105 relative">
+                    {/* Simple hover background */}
+                    <div className="absolute inset-0 rounded-full bg-slate-100/50 dark:bg-slate-800/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    
+                    {/* Light border on hover */}
+                    <div className="absolute inset-0 rounded-full border border-transparent group-hover:border-slate-300/50 dark:group-hover:border-slate-600/50 transition-colors duration-200" />
+                    
+                    {/* Icon */}
+                    <div className="relative z-10">
+                      <ConcentricCircleIcon className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors duration-200" />
+                    </div>
+                  </button>
+                }
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <span>Quick Actions</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 };
