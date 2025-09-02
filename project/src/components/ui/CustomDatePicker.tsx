@@ -182,7 +182,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="fixed z-[101] p-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl min-w-[320px] max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-violet-400 scrollbar-track-violet-100 dark:scrollbar-thumb-violet-700 dark:scrollbar-track-slate-800"
+              className="fixed z-[101] p-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl min-w-[320px]"
               style={{
                 top: containerRef.current ? 
                   `${containerRef.current.getBoundingClientRect().top - 350}px` : 
@@ -269,12 +269,12 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
             {/* Year Picker */}
             {showYearPicker && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="max-h-48 overflow-y-auto mb-4 scrollbar-thin scrollbar-thumb-violet-400 scrollbar-track-violet-100 dark:scrollbar-thumb-violet-700 dark:scrollbar-track-slate-800"
-              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="max-h-48 overflow-y-auto mb-4 calendar-scrollbar"
+                >
                 <div className="grid grid-cols-4 gap-2">
                   {generateYearRange().map((year) => (
                     <motion.button

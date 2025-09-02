@@ -38,7 +38,7 @@ export const LearnersList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+  <div className="min-h-screen relative overflow-hidden bg-white dark:bg-black">
       {/* Floating orbs background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
