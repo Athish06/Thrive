@@ -1,0 +1,145 @@
+import React, { useState, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
+
+export interface StepProps {
+  children: ReactNode;
+}
+
+export const Step: React.FC<StepProps> = ({ children }) => {
+  return <div>{children}</div>;
+};
+
+interface StepperProps {
+  children: React.ReactElement<StepProps>[];
+  initialStep?: number;
+  onStepChange?: (step: number) => void;
+  onFinalStepCompleted?: () => void;
+  backButtonText?: string;
+  nextButtonText?: string;
+}
+
+const Stepper: React.FC<StepperProps> = ({
+  children,
+  initialStep = 1,
+  onStepChange,
+  onFinalStepCompleted,
+  backButtonText = "Previous",
+  nextButtonText = "Next"
+}) => {
+  const [currentStep, setCurrentStep] = useState(initialStep);
+  const totalSteps = children.length;
+
+  const goToNextStep = () => {
+    if (currentStep < totalSteps) {
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      onStepChange?.(nextStep);
+    } else {
+      onFinalStepCompleted?.();
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      onStepChange?.(prevStep);
+    }
+  };
+
+  const goToStep = (step: number) => {
+    if (step >= 1 && step <= totalSteps) {
+      setCurrentStep(step);
+      onStepChange?.(step);
+    }
+  };
+
+  return (
+    <div className="w-full">
+      {/* Step Indicator */}
+      <div className="flex items-center justify-center mb-8">
+        {Array.from({ length: totalSteps }, (_, index) => {
+          const stepNumber = index + 1;
+          const isCompleted = stepNumber < currentStep;
+          const isCurrent = stepNumber === currentStep;
+          
+          return (
+            <React.Fragment key={stepNumber}>
+              <motion.div
+                initial={false}
+                animate={{
+                  backgroundColor: isCompleted
+                    ? 'rgb(139 69 255)' // violet-600
+                    : isCurrent
+                    ? 'rgb(139 69 255)' // violet-600
+                    : 'rgb(226 232 240)', // slate-200
+                  color: isCompleted || isCurrent ? 'white' : 'rgb(71 85 105)', // slate-600
+                  scale: isCurrent ? 1.1 : 1
+                }}
+                transition={{ duration: 0.2 }}
+                className="w-10 h-10 rounded-full flex items-center justify-center font-semibold cursor-pointer"
+                onClick={() => goToStep(stepNumber)}
+              >
+                {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
+              </motion.div>
+              
+              {stepNumber < totalSteps && (
+                <motion.div
+                  initial={false}
+                  animate={{
+                    backgroundColor: isCompleted
+                      ? 'rgb(139 69 255)' // violet-600
+                      : 'rgb(226 232 240)' // slate-200
+                  }}
+                  transition={{ duration: 0.2 }}
+                  className="w-16 h-1 mx-2"
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Step Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+          className="mb-8"
+        >
+          {children[currentStep - 1]}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={goToPreviousStep}
+          disabled={currentStep === 1}
+          className="flex items-center gap-2 px-4 py-2 text-slate-600 dark:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          {backButtonText}
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={goToNextStep}
+          className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-violet-600 to-blue-600 text-white rounded-lg font-medium hover:from-violet-700 hover:to-blue-700 transition-all"
+        >
+          {currentStep === totalSteps ? 'Complete' : nextButtonText}
+          <ChevronRight className="w-4 h-4" />
+        </motion.button>
+      </div>
+    </div>
+  );
+};
+
+export default Stepper;

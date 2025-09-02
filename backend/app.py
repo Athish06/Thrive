@@ -5,8 +5,9 @@ from pydantic import BaseModel, EmailStr
 from users.users import create_user
 from authentication.authh import authenticate_user_detailed, create_access_token, get_current_user, update_last_login
 from users.profiles import get_therapist_profile, get_parent_profile, update_therapist_profile, update_parent_profile
+from students.students import get_all_students, get_student_by_id, get_students_by_therapist, enroll_student
 # import psycopg2  # Commented out - using Supabase now
-from typing import Optional
+from typing import Optional, List
 from datetime import timedelta
 import logging
 
@@ -18,7 +19,7 @@ app = FastAPI(title="ThrivePath API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React dev server
+    allow_origins=["http://localhost:3000", "http://localhost:5173","http://localhost:5174"],  # React dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,6 +83,33 @@ class ProfileUpdateRequest(BaseModel):
     bio: Optional[str] = None  # For therapists
     address: Optional[str] = None  # For parents
     emergency_contact: Optional[str] = None  # For parents
+
+class StudentResponse(BaseModel):
+    id: int
+    name: str
+    firstName: str
+    lastName: str
+    age: Optional[int] = None
+    dateOfBirth: Optional[str] = None
+    enrollmentDate: Optional[str] = None
+    diagnosis: Optional[str] = None
+    status: str
+    primaryTherapist: Optional[str] = None
+    primaryTherapistId: Optional[int] = None
+    profileDetails: Optional[dict] = None
+    photo: Optional[str] = None
+    progressPercentage: Optional[int] = 75
+    nextSession: Optional[str] = None
+    goals: Optional[List[str]] = []
+
+class StudentEnrollment(BaseModel):
+    firstName: str
+    lastName: str
+    dateOfBirth: str
+    diagnosis: Optional[str] = None
+    age: Optional[int] = None
+    goals: Optional[List[str]] = []
+    therapistId: int
 
 @app.post("/api/login", response_model=LoginResponse)
 async def login_user(user_credentials: UserLogin):
@@ -280,6 +308,102 @@ async def update_user_profile(
             raise HTTPException(status_code=400, detail="Invalid user role")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to update profile")
+
+@app.get("/api/test-auth")
+async def test_auth(current_user: dict = Depends(get_current_user)):
+    """
+    Test endpoint to verify authentication is working
+    """
+    return {
+        "message": "Authentication successful",
+        "user": current_user
+    }
+
+@app.get("/api/students", response_model=List[StudentResponse])
+async def get_all_students_route(current_user: dict = Depends(get_current_user)):
+    """
+    Get all students/children in the system
+    Accessible by authenticated users
+    """
+    try:
+        students = get_all_students()
+        return [StudentResponse(**student) for student in students]
+        
+    except Exception as e:
+        logger.error(f"Error fetching all students: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch students")
+
+@app.get("/api/students/{student_id}", response_model=StudentResponse)
+async def get_student_route(
+    student_id: int, 
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get a specific student by ID
+    Only accessible by therapists
+    """
+    try:
+        # Check if user is therapist
+        if current_user["role"] != "therapist":
+            raise HTTPException(
+                status_code=403, 
+                detail="Access denied. Only therapists can view student details."
+            )
+        
+        student = get_student_by_id(student_id)
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        return StudentResponse(**student)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching student {student_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch student")
+
+@app.get("/api/my-students", response_model=List[StudentResponse])
+async def get_my_students_route(current_user: dict = Depends(get_current_user)):
+    """
+    Get students assigned to the current therapist
+    Only accessible by therapists
+    """
+    try:
+        # Check if user is therapist
+        if current_user["role"] != "therapist":
+            raise HTTPException(
+                status_code=403, 
+                detail="Access denied. Only therapists can view assigned students."
+            )
+        
+        students = get_students_by_therapist(current_user["id"])
+        return [StudentResponse(**student) for student in students]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching students for therapist {current_user['id']}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch assigned students")
+
+@app.post("/api/enroll-student", response_model=StudentResponse)
+async def enroll_student_route(
+    student_data: StudentEnrollment,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Enroll a new student
+    """
+    try:
+        # Convert Pydantic model to dict
+        student_dict = student_data.dict()
+        
+        # Enroll the student
+        student = enroll_student(student_dict)
+        return StudentResponse(**student)
+        
+    except Exception as e:
+        logger.error(f"Error enrolling student: {e}")
+        raise HTTPException(status_code=500, detail="Failed to enroll student")
 
 @app.get("/")
 async def root():

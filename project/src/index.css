@@ -27,12 +27,12 @@
   }
 
   [data-theme="dark"] {
-    --background: 10 10 11;
-    --surface: 24 24 27;
-    --surface-elevated: 39 39 42;
-    --border: 63 63 70;
-    --text-primary: 250 250 250;
-    --text-secondary: 161 161 170;
+    --background: 2 2 3;
+    --surface: 15 15 17;
+    --surface-elevated: 30 30 32;
+    --border: 51 51 55;
+    --text-primary: 248 250 252;
+    --text-secondary: 148 163 184;
     --accent: 96 165 250;
     --accent-hover: 59 130 246;
     --success: 52 211 153;
@@ -70,15 +70,11 @@
 
 @layer components {
   .glass-card {
-    backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    @apply backdrop-blur-lg border-2 border-slate-200/60 dark:border-slate-700/60;
+    background-color: rgb(var(--surface) / 0.7);
   }
-
-  .dark .glass-card {
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  [data-theme="dark"] .glass-card {
+    background-color: rgb(var(--surface) / 0.5);
   }
 }
 

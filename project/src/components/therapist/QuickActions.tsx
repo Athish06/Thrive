@@ -3,6 +3,7 @@ import { Users, StickyNote, CalendarPlus } from 'lucide-react';
 import ConcentricCircleIcon from '../ui/ConcentricCircleIcon';
 import HorizontalDropdown from '../ui/HorizontalDropdown';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { StudentEnrollmentModal } from './StudentEnrollmentModal';
 import { useTheme } from '../../hooks/useTheme';
 
 interface QuickActionsProps {
@@ -10,8 +11,9 @@ interface QuickActionsProps {
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ onOpenNotesViewer }) => {
-      const { theme: appTheme } = useTheme();
+  const { theme: appTheme } = useTheme();
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
+  const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
   
   useEffect(() => {
     if (appTheme === 'system') {
@@ -38,7 +40,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onOpenNotesViewer })
     },
     {
       label: 'Add Learner',
-      action: () => console.log('Add learner'),
+      action: () => setIsEnrollmentModalOpen(true),
       icon: <Users className="w-5 h-5" />,
     },
     {
@@ -79,6 +81,16 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onOpenNotesViewer })
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      {/* Student Enrollment Modal */}
+      <StudentEnrollmentModal
+        isOpen={isEnrollmentModalOpen}
+        onClose={() => setIsEnrollmentModalOpen(false)}
+        onSuccess={() => {
+          // Optional: Add success callback
+          console.log('Student enrolled successfully!');
+        }}
+      />
     </div>
   );
 };
