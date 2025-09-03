@@ -1,11 +1,8 @@
-import * as React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Calendar as CalendarIcon, Users, Clock, BookOpen, CheckCircle } from 'lucide-react';
-// Update the import path below to the correct location of your Calendar component, or install one if missing
-import { Calendar } from 'react-calendar';
-// If you don't have 'react-calendar', install it with: npm install react-calendar
-import 'react-calendar/dist/Calendar.css';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Users, Calendar as CalendarIcon, BookOpen, Clock, CheckCircle } from 'lucide-react';
+import Stepper, { Step } from '../ui/Stepper';
+import { CustomDatePicker } from '../ui/CustomDatePicker';
 
 // Custom styles for the calendar
 const calendarStyle = `
@@ -105,226 +102,265 @@ export interface SessionAddModalProps {
   onAdd: (session: any) => void;
 }
 
+interface SessionData {
+  learnerId: string;
+  date: string;
+  time: string;
+  activities: string[];
+}
+
 export const SessionAddModal: React.FC<SessionAddModalProps> = ({ open, onClose, onAdd }) => {
-  const [step, setStep] = React.useState(0);
-  const [selectedLearner, setSelectedLearner] = React.useState<string | null>(null);
-  const [date, setDate] = React.useState<Date | null>(null);
-  const [time, setTime] = React.useState('');
-  const [selectedActivities, setSelectedActivities] = React.useState<string[]>([]);
+  const [sessionData, setSessionData] = useState<SessionData>({
+    learnerId: '',
+    date: '',
+    time: '',
+    activities: []
+  });
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  const handleInputChange = (field: keyof SessionData, value: string | string[]) => {
+    setSessionData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
-  const handleNext = () => setStep((s) => s + 1);
-  const handleBack = () => setStep((s) => s - 1);
-  const handleAdd = () => {
-    if (selectedLearner && date && time && selectedActivities.length > 0) {
+  const toggleActivity = (activity: string) => {
+    setSessionData(prev => ({
+      ...prev,
+      activities: prev.activities.includes(activity)
+        ? prev.activities.filter(a => a !== activity)
+        : [...prev.activities, activity]
+    }));
+  };
+
+  const handleSubmit = () => {
+    const selectedLearner = learners.find(l => l.id === sessionData.learnerId);
+    if (selectedLearner && sessionData.date && sessionData.time && sessionData.activities.length > 0) {
       onAdd({
-        learner: learners.find(l => l.id === selectedLearner)?.name,
-        date: date.toISOString().split('T')[0],
-        time,
-        activities: selectedActivities,
+        learner: selectedLearner.name,
+        date: sessionData.date,
+        time: sessionData.time,
+        activities: sessionData.activities,
       });
-      setStep(0);
-      setSelectedLearner(null);
-      setDate(null);
-      setTime('');
-      setSelectedActivities([]);
+      
+      // Reset form
+      setSessionData({
+        learnerId: '',
+        date: '',
+        time: '',
+        activities: []
+      });
       onClose();
     }
   };
 
-  const stepTitles = [
-    { icon: Users, title: 'Select Learner', subtitle: 'Choose who this session is for' },
-    { icon: CalendarIcon, title: 'Schedule Session', subtitle: 'Pick date and time' },
-    { icon: BookOpen, title: 'Choose Activities', subtitle: 'Select therapy activities' }
-  ];
+  if (!open) return null;
 
   return (
-    <>
-      <style>{calendarStyle}</style>
-      <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl text-white">
-              {React.createElement(stepTitles[step].icon, { className: "h-6 w-6" })}
-            </div>
-            <div>
-              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                {stepTitles[step].title}
-              </DialogTitle>
-              <p className="text-sm text-gray-500 mt-1">{stepTitles[step].subtitle}</p>
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 p-8 pb-0">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 text-white">
+                  <CalendarIcon className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+                    Schedule New Session
+                  </h2>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Create a new therapy session for your learners
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
             </div>
           </div>
-          
-          {/* Progress Bar */}
-          <div className="flex items-center gap-2 mb-6">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                  i <= step ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-200'
-                }`}
-              />
-            ))}
-          </div>
-        </DialogHeader>
-        {/* Step 1: Select Learner */}
-        {step === 0 && (
-          <div className="space-y-6 animate-in fade-in-50 duration-300">
-            <div className="grid grid-cols-1 gap-3">
-              {learners.map(learner => (
-                <Button
-                  key={learner.id}
-                  variant={selectedLearner === learner.id ? 'default' : 'outline'}
-                  className={`p-4 h-auto justify-start text-left transition-all duration-200 ${
-                    selectedLearner === learner.id 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg scale-105' 
-                      : 'hover:bg-gray-50 hover:border-blue-300'
-                  }`}
-                  onClick={() => setSelectedLearner(learner.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                      selectedLearner === learner.id 
-                        ? 'bg-white/20 text-white' 
-                        : 'bg-gradient-to-br from-blue-100 to-purple-100 text-blue-700'
-                    }`}>
-                      {learner.name.split(' ').map(n => n[0]).join('')}
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-8 pb-8">
+            <Stepper
+              initialStep={1}
+              onFinalStepCompleted={handleSubmit}
+              backButtonText="Previous"
+              nextButtonText="Next"
+            >
+              {/* Step 1: Select Learner */}
+              <Step>
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <span className="font-medium">{learner.name}</span>
+                    <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-2">
+                      Select Learner
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Choose who this session is for
+                    </p>
                   </div>
-                </Button>
-              ))}
-            </div>
-            <DialogFooter>
-              <Button 
-                onClick={handleNext} 
-                disabled={!selectedLearner}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8"
-              >
-                Continue
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-        {/* Step 2: Select Date & Time */}
-        {step === 1 && (
-          <div className="space-y-6 animate-in fade-in-50 duration-300">
-            <div className="space-y-4">
-              <div className="calendar-container">
-                <Calendar
-                  value={date}
-                  onChange={value => {
-                    if (value instanceof Date) {
-                      setDate(value);
-                    } else if (Array.isArray(value) && value[0] instanceof Date) {
-                      setDate(value[0]);
-                    } else {
-                      setDate(null);
-                    }
-                  }}
-                  minDate={today}
-                  className="modern-calendar w-full rounded-xl border border-gray-200 shadow-sm"
-                />
-              </div>
-              
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-gray-700">Select Time</span>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {learners.map(learner => (
+                      <button
+                        key={learner.id}
+                        onClick={() => handleInputChange('learnerId', learner.id)}
+                        className={`p-4 rounded-xl transition-all border-2 text-left ${
+                          sessionData.learnerId === learner.id
+                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-600 bg-white dark:bg-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            sessionData.learnerId === learner.id
+                              ? 'bg-violet-600 text-white'
+                              : 'bg-gradient-to-br from-blue-100 to-purple-100 dark:from-slate-700 dark:to-slate-600 text-blue-700 dark:text-blue-300'
+                          }`}>
+                            {learner.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <span className="font-medium text-slate-800 dark:text-white">{learner.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={e => setTime(e.target.value)}
-                    min="08:00"
-                    max="18:00"
-                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <span className="text-xs text-gray-500 bg-white px-3 py-2 rounded-lg border">8:00 AM - 6:00 PM</span>
-                </div>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={handleBack} className="px-6">
-                Back
-              </Button>
-              <Button 
-                onClick={handleNext} 
-                disabled={!date || !time}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8"
-              >
-                Continue
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-        {/* Step 3: Select Activities */}
-        {step === 2 && (
-          <div className="space-y-6 animate-in fade-in-50 duration-300">
-            <div className="grid grid-cols-1 gap-3">
-              {activities.map(activity => (
-                <Button
-                  key={activity}
-                  variant={selectedActivities.includes(activity) ? 'default' : 'outline'}
-                  className={`p-4 h-auto justify-start text-left transition-all duration-200 ${
-                    selectedActivities.includes(activity) 
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg scale-105' 
-                      : 'hover:bg-gray-50 hover:border-green-300'
-                  }`}
-                  onClick={() => setSelectedActivities(prev => 
-                    prev.includes(activity) 
-                      ? prev.filter(a => a !== activity) 
-                      : [...prev, activity]
-                  )}
-                >
-                  <div className="flex items-center justify-between w-full">
+              </Step>
+
+              {/* Step 2: Schedule Session */}
+              <Step>
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/50 dark:to-amber-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CalendarIcon className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-2">
+                      Schedule Session
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Pick the date and time for the session
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Session Date
+                    </label>
+                    <CustomDatePicker
+                      value={sessionData.date}
+                      onChange={(date) => handleInputChange('date', date)}
+                      placeholder="Select session date"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Session Time
+                    </label>
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        selectedActivities.includes(activity) 
-                          ? 'bg-white/20 text-white' 
-                          : 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-700'
-                      }`}>
-                        <BookOpen className="h-4 w-4" />
-                      </div>
-                      <span className="font-medium">{activity}</span>
+                      <input
+                        type="time"
+                        value={sessionData.time}
+                        onChange={(e) => handleInputChange('time', e.target.value)}
+                        min="08:00"
+                        max="18:00"
+                        className="flex-1 px-4 py-3 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all text-slate-800 dark:text-white"
+                      />
+                      <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                        8:00 AM - 6:00 PM
+                      </span>
                     </div>
-                    {selectedActivities.includes(activity) && (
-                      <CheckCircle className="h-5 w-5 text-white" />
-                    )}
                   </div>
-                </Button>
-              ))}
-            </div>
-            
-            {selectedActivities.length > 0 && (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <p className="text-sm text-green-700 font-medium">
-                  {selectedActivities.length} activit{selectedActivities.length === 1 ? 'y' : 'ies'} selected
-                </p>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={handleBack} className="px-6">
-                Back
-              </Button>
-              <Button 
-                onClick={handleAdd} 
-                disabled={selectedActivities.length === 0}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8"
-              >
-                Create Session
-              </Button>
-            </DialogFooter>
+                </div>
+              </Step>
+
+              {/* Step 3: Choose Activities */}
+              <Step>
+                <div className="space-y-6">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BookOpen className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-2">
+                      Choose Activities
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Select the therapy activities for this session
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {activities.map(activity => (
+                      <button
+                        key={activity}
+                        onClick={() => toggleActivity(activity)}
+                        className={`p-4 rounded-xl transition-all border-2 text-left ${
+                          sessionData.activities.includes(activity)
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                            : 'border-slate-200 dark:border-slate-700 hover:border-green-300 dark:hover:border-green-600 bg-white dark:bg-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              sessionData.activities.includes(activity)
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gradient-to-br from-green-100 to-emerald-100 dark:from-slate-700 dark:to-slate-600 text-green-700 dark:text-green-300'
+                            }`}>
+                              <BookOpen className="h-4 w-4" />
+                            </div>
+                            <span className="font-medium text-slate-800 dark:text-white">{activity}</span>
+                          </div>
+                          {sessionData.activities.includes(activity) && (
+                            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {sessionData.activities.length > 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                      <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                        {sessionData.activities.length} activit{sessionData.activities.length === 1 ? 'y' : 'ies'} selected
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Completion Summary */}
+                  <div className="bg-gradient-to-r from-violet-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-xl">
+                    <h4 className="font-medium text-slate-800 dark:text-white mb-2">Ready to schedule!</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Session will be scheduled with {sessionData.activities.length} selected activities.
+                    </p>
+                  </div>
+                </div>
+              </Step>
+            </Stepper>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
-    </>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
