@@ -54,3 +54,22 @@ CREATE INDEX idx_therapists_user_id ON therapists(user_id);
 CREATE INDEX idx_therapists_email ON therapists(email);
 CREATE INDEX idx_parents_user_id ON parents(user_id);
 CREATE INDEX idx_parents_email ON parents(email);
+
+-- Session Notes table for storing therapist notes
+CREATE TABLE session_notes (
+  notes_id BIGSERIAL PRIMARY KEY,
+  therapist_id BIGINT NOT NULL,
+  session_date DATE NOT NULL,  -- The date the session occurred
+  note_content TEXT NOT NULL,
+  note_title VARCHAR(255),  -- Optional: brief title/summary
+  session_time TIME,  -- Optional: time of session
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  last_edited_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  CONSTRAINT fk_notes_therapist FOREIGN KEY (therapist_id) REFERENCES therapists(id) ON DELETE CASCADE
+);
+
+-- Indexes for session notes
+CREATE INDEX idx_session_notes_therapist_id ON session_notes(therapist_id);
+CREATE INDEX idx_session_notes_session_date ON session_notes(session_date);
+CREATE INDEX idx_session_notes_therapist_date ON session_notes(therapist_id, session_date);

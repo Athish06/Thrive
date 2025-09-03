@@ -6,9 +6,10 @@ from users.users import create_user
 from authentication.authh import authenticate_user_detailed, create_access_token, get_current_user, update_last_login
 from users.profiles import get_therapist_profile, get_parent_profile, update_therapist_profile, update_parent_profile
 from students.students import get_all_students, get_student_by_id, get_students_by_therapist, enroll_student
+from notes.notes import get_notes_by_date_and_therapist, create_session_note, get_notes_with_dates_for_therapist, SessionNoteCreate, SessionNoteResponse
 # import psycopg2  # Commented out - using Supabase now
 from typing import Optional, List
-from datetime import timedelta
+from datetime import timedelta, date
 import logging
 
 # Set up logging
@@ -404,6 +405,44 @@ async def enroll_student_route(
     except Exception as e:
         logger.error(f"Error enrolling student: {e}")
         raise HTTPException(status_code=500, detail="Failed to enroll student")
+
+# ==================== SESSION NOTES ENDPOINTS ====================
+
+@app.get("/api/notes/{session_date}", response_model=List[SessionNoteResponse])
+async def get_notes_by_date(session_date: date, current_user: dict = Depends(get_current_user)):
+    """Get all session notes for the current therapist on a specific date"""
+    try:
+        therapist_id = current_user['id']
+        notes = await get_notes_by_date_and_therapist(therapist_id, session_date)
+        return notes
+    except Exception as e:
+        logger.error(f"Error fetching notes for date {session_date}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch notes")
+
+@app.post("/api/notes", response_model=SessionNoteResponse)
+async def create_note(note_data: SessionNoteCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new session note"""
+    try:
+        therapist_id = current_user['id']
+        note = await create_session_note(therapist_id, note_data)
+        return note
+    except Exception as e:
+        logger.error(f"Error creating note: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create note")
+
+@app.get("/api/notes/dates/all", response_model=List[str])
+async def get_notes_dates(current_user: dict = Depends(get_current_user)):
+    """Get all dates that have notes for the current therapist (for calendar highlighting)"""
+    try:
+        therapist_id = current_user['id']
+        dates = await get_notes_with_dates_for_therapist(therapist_id)
+        # Convert dates to strings for JSON serialization
+        return [d.isoformat() for d in dates]
+    except Exception as e:
+        logger.error(f"Error fetching notes dates: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch notes dates")
+
+# ==================== ROOT ENDPOINTS ====================
 
 @app.get("/")
 async def root():
