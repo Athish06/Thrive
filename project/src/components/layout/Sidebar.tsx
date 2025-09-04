@@ -55,7 +55,7 @@ const therapistMenuItems: MenuSectionType[] = [
         path: '/learners',
         submenu: [
           { label: 'All Learners', path: '/learners' },
-          { label: 'Active Therapy', path: '/learners/active' },
+          { label: 'My Learners', path: '/learners/my-learners' },
           { label: 'New Enrollments', path: '/learners/new' },
           { label: 'Assessment Due', path: '/learners/assessment' },
           { label: 'Inactive/On Hold', path: '/learners/inactive' },

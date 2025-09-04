@@ -12,6 +12,7 @@ import { cn } from './lib/utils';
 import TherapistDashboard from './components/therapist/TherapistDashboard';
 import { ThemeProvider } from './context/ThemeProvider';
 import { LearnersList } from './components/therapist/LearnersList';
+import { MyLearners } from './components/therapist/MyLearners';
 import { ParentDashboard } from './components/parent/ParentDashboard';
 import { HomeworkManager } from './components/parent/HomeworkManager';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
@@ -41,10 +42,18 @@ const DashboardLayout: React.FC = () => {
           
           {/* Therapist Routes */}
           <Route 
-            path="/learners/*" 
+            path="/learners" 
             element={
               <ProtectedRoute requiredRole="therapist">
                 <LearnersList />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/learners/my-learners" 
+            element={
+              <ProtectedRoute requiredRole="therapist">
+                <MyLearners />
               </ProtectedRoute>
             } 
           />
