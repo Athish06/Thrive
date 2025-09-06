@@ -17,6 +17,7 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
   const [selectedHour, setSelectedHour] = useState(12);
   const [selectedMinute, setSelectedMinute] = useState(0);
   const [isSelectingHour, setIsSelectingHour] = useState(true);
+  const [isAM, setIsAM] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const clockRef = useRef<SVGSVGElement>(null);
 
@@ -24,8 +25,10 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
   useEffect(() => {
     if (value) {    
       const [hours, minutes] = value.split(':').map(Number);
-      setSelectedHour(hours === 0 ? 12 : hours > 12 ? hours - 12 : hours);
+      const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      setSelectedHour(displayHour);
       setSelectedMinute(minutes);
+      setIsAM(hours < 12);
     }
   }, [value]);
 
@@ -55,6 +58,17 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
     };
   }, []);
 
+  // Convert 12-hour time to 24-hour format
+  const formatTime24Hour = (hour: number, minute: number, isAMPeriod: boolean) => {
+    let hour24 = hour;
+    if (isAMPeriod && hour === 12) {
+      hour24 = 0;
+    } else if (!isAMPeriod && hour !== 12) {
+      hour24 = hour + 12;
+    }
+    return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  };
+
   // Handle clock interaction
   const handleClockClick = (event: React.MouseEvent<SVGSVGElement>) => {
     if (!clockRef.current) return;
@@ -80,8 +94,7 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
       setSelectedMinute(adjustedMinute);
       
       // Update parent component
-      const finalHour = selectedHour;
-      const timeString = `${finalHour.toString().padStart(2, '0')}:${adjustedMinute.toString().padStart(2, '0')}`;
+      const timeString = formatTime24Hour(selectedHour, adjustedMinute, isAM);
       onChange?.(timeString);
     }
   };
@@ -254,7 +267,7 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedHour(hour);
-                    const timeString = `${hour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')}`;
+                    const timeString = formatTime24Hour(hour, selectedMinute, isAM);
                     onChange?.(timeString);
                     setIsSelectingHour(false);
                   }}
@@ -310,7 +323,7 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedMinute(minute);
-                    const timeString = `${selectedHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const timeString = formatTime24Hour(selectedHour, minute, isAM);
                     onChange?.(timeString);
                   }}
                 >
@@ -378,11 +391,45 @@ export const AnalogClock: React.FC<AnalogClockProps> = ({
         </svg>
       </motion.div>
 
-      {/* Selected Time Display */}
-      <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
-        <p className="text-lg font-semibold text-slate-800 dark:text-white text-center">
-          {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')}
-        </p>
+      {/* Selected Time Display with AM/PM Toggle */}
+      <div className="flex items-center space-x-3">
+        <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
+          <p className="text-lg font-semibold text-slate-800 dark:text-white text-center">
+            {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')}
+          </p>
+        </div>
+        
+        {/* AM/PM Toggle */}
+        <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-200 dark:border-slate-600">
+          <button
+            onClick={() => {
+              setIsAM(true);
+              const timeString = formatTime24Hour(selectedHour, selectedMinute, true);
+              onChange?.(timeString);
+            }}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+              isAM
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400'
+            }`}
+          >
+            AM
+          </button>
+          <button
+            onClick={() => {
+              setIsAM(false);
+              const timeString = formatTime24Hour(selectedHour, selectedMinute, false);
+              onChange?.(timeString);
+            }}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+              !isAM
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400'
+            }`}
+          >
+            PM
+          </button>
+        </div>
       </div>
 
       {/* Instructions */}
