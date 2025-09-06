@@ -7,6 +7,12 @@ from authentication.authh import authenticate_user_detailed, create_access_token
 from users.profiles import get_therapist_profile, get_parent_profile, update_therapist_profile, update_parent_profile
 from students.students import get_all_students, get_student_by_id, get_students_by_therapist, enroll_student
 from notes.notes import get_notes_by_date_and_therapist, create_session_note, get_notes_with_dates_for_therapist, SessionNoteCreate, SessionNoteResponse
+from sessions.sessions import (
+    create_session, get_sessions_by_therapist, get_session_by_id, update_session, delete_session,
+    add_activity_to_session, get_session_activities, get_available_student_activities, 
+    remove_activity_from_session, SessionCreate, SessionUpdate, SessionResponse,
+    SessionActivityCreate, SessionActivityUpdate, SessionActivityResponse, StudentActivityResponse
+)
 # import psycopg2  # Commented out - using Supabase now
 from typing import Optional, List
 from datetime import timedelta, date
@@ -20,7 +26,7 @@ app = FastAPI(title="ThrivePath API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173","http://localhost:5174"],  # React dev server
+    allow_origins=["*"],  # React dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -441,6 +447,124 @@ async def get_notes_dates(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error fetching notes dates: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch notes dates")
+
+# ============ SESSIONS ENDPOINTS ============
+
+@app.post("/api/sessions", response_model=SessionResponse)
+async def create_session_endpoint(session_data: SessionCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new therapy session"""
+    try:
+        therapist_id = current_user['id']
+        session = await create_session(therapist_id, session_data)
+        return session
+    except Exception as e:
+        logger.error(f"Error creating session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create session")
+
+@app.get("/api/sessions", response_model=List[SessionResponse])
+async def get_sessions(limit: int = 50, offset: int = 0, current_user: dict = Depends(get_current_user)):
+    """Get all sessions for the current therapist"""
+    try:
+        therapist_id = current_user['id']
+        sessions = await get_sessions_by_therapist(therapist_id, limit, offset)
+        return sessions
+    except Exception as e:
+        logger.error(f"Error fetching sessions: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch sessions")
+
+@app.get("/api/sessions/{session_id}", response_model=SessionResponse)
+async def get_session(session_id: int, current_user: dict = Depends(get_current_user)):
+    """Get a specific session by ID"""
+    try:
+        therapist_id = current_user['id']
+        session = await get_session_by_id(session_id, therapist_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch session")
+
+@app.put("/api/sessions/{session_id}", response_model=SessionResponse)
+async def update_session_endpoint(session_id: int, session_data: SessionUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a session"""
+    try:
+        therapist_id = current_user['id']
+        session = await update_session(session_id, therapist_id, session_data)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update session")
+
+@app.delete("/api/sessions/{session_id}")
+async def delete_session_endpoint(session_id: int, current_user: dict = Depends(get_current_user)):
+    """Delete a session"""
+    try:
+        therapist_id = current_user['id']
+        success = await delete_session(session_id, therapist_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"message": "Session deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete session")
+
+# ============ SESSION ACTIVITIES ENDPOINTS ============
+
+@app.post("/api/sessions/{session_id}/activities", response_model=SessionActivityResponse)
+async def add_activity_to_session_endpoint(session_id: int, activity_data: SessionActivityCreate, current_user: dict = Depends(get_current_user)):
+    """Add an activity to a session"""
+    try:
+        therapist_id = current_user['id']
+        activity = await add_activity_to_session(session_id, therapist_id, activity_data)
+        return activity
+    except Exception as e:
+        logger.error(f"Error adding activity to session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add activity to session")
+
+@app.get("/api/sessions/{session_id}/activities", response_model=List[SessionActivityResponse])
+async def get_session_activities_endpoint(session_id: int, current_user: dict = Depends(get_current_user)):
+    """Get all activities for a session"""
+    try:
+        therapist_id = current_user['id']
+        activities = await get_session_activities(session_id, therapist_id)
+        return activities
+    except Exception as e:
+        logger.error(f"Error fetching activities for session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch session activities")
+
+@app.get("/api/students/{student_id}/activities", response_model=List[StudentActivityResponse])
+async def get_student_activities_endpoint(student_id: int, current_user: dict = Depends(get_current_user)):
+    """Get all available activities for a student"""
+    try:
+        activities = await get_available_student_activities(student_id)
+        return activities
+    except Exception as e:
+        logger.error(f"Error fetching activities for student {student_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch student activities")
+
+@app.delete("/api/sessions/{session_id}/activities/{activity_id}")
+async def remove_activity_from_session_endpoint(session_id: int, activity_id: int, current_user: dict = Depends(get_current_user)):
+    """Remove an activity from a session"""
+    try:
+        therapist_id = current_user['id']
+        success = await remove_activity_from_session(activity_id, session_id, therapist_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Activity not found in session")
+        return {"message": "Activity removed from session successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing activity {activity_id} from session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to remove activity from session")
 
 # ==================== ROOT ENDPOINTS ====================
 

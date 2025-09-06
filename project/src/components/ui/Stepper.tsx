@@ -58,47 +58,59 @@ const Stepper: React.FC<StepperProps> = ({
   return (
     <div className="w-full">
       {/* Step Indicator */}
-      <div className="flex items-center justify-center mb-8">
-        {Array.from({ length: totalSteps }, (_, index) => {
-          const stepNumber = index + 1;
-          const isCompleted = stepNumber < currentStep;
-          const isCurrent = stepNumber === currentStep;
-          
-          return (
-            <React.Fragment key={stepNumber}>
-              <motion.div
-                initial={false}
-                animate={{
-                  backgroundColor: isCompleted
-                    ? 'rgb(139 69 255)' // violet-600
-                    : isCurrent
-                    ? 'rgb(139 69 255)' // violet-600
-                    : 'rgb(226 232 240)', // slate-200
-                  color: isCompleted || isCurrent ? 'white' : 'rgb(71 85 105)', // slate-600
-                  scale: isCurrent ? 1.1 : 1
-                }}
-                transition={{ duration: 0.2 }}
-                className="w-10 h-10 rounded-full flex items-center justify-center font-semibold cursor-pointer"
-                onClick={() => goToStep(stepNumber)}
-              >
-                {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
-              </motion.div>
-              
-              {stepNumber < totalSteps && (
+      <div className="flex items-center justify-center mb-16 px-4">
+        <div className="flex items-center">
+          {Array.from({ length: totalSteps }, (_, index) => {
+            const stepNumber = index + 1;
+            const isCompleted = stepNumber < currentStep;
+            const isCurrent = stepNumber === currentStep;
+            
+            return (
+              <React.Fragment key={stepNumber}>
                 <motion.div
                   initial={false}
                   animate={{
                     backgroundColor: isCompleted
                       ? 'rgb(139 69 255)' // violet-600
-                      : 'rgb(226 232 240)' // slate-200
+                      : isCurrent
+                      ? 'rgb(139 69 255)' // violet-600
+                      : 'rgb(226 232 240)', // slate-200 light mode
+                    color: isCompleted || isCurrent ? 'white' : 'rgb(71 85 105)', // slate-600
+                    scale: isCurrent ? 1.05 : 1
                   }}
-                  transition={{ duration: 0.2 }}
-                  className="w-16 h-1 mx-2"
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-semibold cursor-pointer shadow-md border-2 border-white dark:border-slate-800 relative z-10 dark:bg-slate-700 dark:text-slate-300"
+                  style={{
+                    backgroundColor: isCompleted || isCurrent 
+                      ? 'rgb(139 69 255)' 
+                      : undefined
+                  }}
+                  onClick={() => goToStep(stepNumber)}
+                >
+                  {isCompleted ? <Check className="w-4 h-4" /> : stepNumber}
+                </motion.div>
+                
+                {stepNumber < totalSteps && (
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      backgroundColor: isCompleted
+                        ? 'rgb(139 69 255)' // violet-600
+                        : 'rgb(226 232 240)' // slate-200
+                    }}
+                    transition={{ duration: 0.2 }}
+                    className="w-16 h-1.5 mx-2 rounded-full dark:bg-slate-700"
+                    style={{
+                      backgroundColor: isCompleted 
+                        ? 'rgb(139 69 255)' 
+                        : undefined
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
       </div>
 
       {/* Step Content */}
@@ -109,7 +121,7 @@ const Stepper: React.FC<StepperProps> = ({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="mb-8"
+          className="mb-12 min-h-[400px]"
         >
           {children[currentStep - 1]}
         </motion.div>

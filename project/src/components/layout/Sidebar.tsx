@@ -74,8 +74,8 @@ const therapistMenuItems: MenuSectionType[] = [
     items: [
       { 
         icon: Calendar, 
-        label: 'Session Planning', 
-        path: '/sessions' 
+        label: 'Sessions', 
+        path: '/sessions'
       },
       { 
         icon: BarChart3, 
