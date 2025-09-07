@@ -59,6 +59,20 @@ class UserRegistration(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     emergencyContact: Optional[str] = None
+    # Additional parent-specific fields
+    parentFirstName: Optional[str] = None
+    parentLastName: Optional[str] = None
+    childFirstName: Optional[str] = None
+    childLastName: Optional[str] = None
+    childDob: Optional[str] = None
+    relationToChild: Optional[str] = None
+    alternatePhone: Optional[str] = None
+    addressLine1: Optional[str] = None
+    addressLine2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postalCode: Optional[str] = None
+    country: Optional[str] = None
 
 class TherapistProfile(BaseModel):
     id: int
@@ -200,7 +214,21 @@ async def register_user(user_data: UserRegistration):
             last_name=user_data.lastName,
             phone=user_data.phone,
             address=user_data.address,
-            emergency_contact=user_data.emergencyContact
+            emergency_contact=user_data.emergencyContact,
+            # Pass additional parent fields
+            parent_first_name=user_data.parentFirstName,
+            parent_last_name=user_data.parentLastName,
+            child_first_name=user_data.childFirstName,
+            child_last_name=user_data.childLastName,
+            child_dob=user_data.childDob,
+            relation_to_child=user_data.relationToChild,
+            alternate_phone=user_data.alternatePhone,
+            address_line1=user_data.addressLine1,
+            address_line2=user_data.addressLine2,
+            city=user_data.city,
+            state=user_data.state,
+            postal_code=user_data.postalCode,
+            country=user_data.country
         )
         
         return UserResponse(
@@ -242,7 +270,7 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         elif current_user["role"] == "parent":
             profile = get_parent_profile(current_user["id"])
             if profile:
-                profile_name = f"{profile['first_name']} {profile['last_name']}"
+                profile_name = f"{profile['parent_first_name']} {profile['parent_last_name']}"
     except Exception as e:
         # If profile fetch fails, continue without name
         print(f"Warning: Could not fetch profile for user {current_user['id']}: {e}")

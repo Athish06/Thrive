@@ -9,7 +9,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 def create_user(email: str, password: str, role: str, first_name: str = None, last_name: str = None, 
-                phone: str = None, address: str = None, emergency_contact: str = None) -> dict:
+                phone: str = None, address: str = None, emergency_contact: str = None,
+                # Additional parent fields
+                parent_first_name: str = None, parent_last_name: str = None,
+                child_first_name: str = None, child_last_name: str = None,
+                child_dob: str = None, relation_to_child: str = None,
+                alternate_phone: str = None, address_line1: str = None,
+                address_line2: str = None, city: str = None, state: str = None,
+                postal_code: str = None, country: str = None) -> dict:
     """
     Create a new user in the database and corresponding therapist/parent record using Supabase.
     Returns the created user dict (without password hash).
@@ -69,15 +76,28 @@ def create_user(email: str, password: str, role: str, first_name: str = None, la
                 logger.info(f"Created therapist profile with ID: {profiles[0]['id']}")
                 
         elif role == "parent":
+            # Use the new parent fields if provided, otherwise fall back to basic fields
+            parent_fname = parent_first_name or first_name or ""
+            parent_lname = parent_last_name or last_name or ""
+            
             profile_data = {
                 'user_id': user_id,
-                'first_name': first_name,
-                'last_name': last_name,
+                'parent_first_name': parent_fname,
+                'parent_last_name': parent_lname,
+                'child_first_name': child_first_name or "",
+                'child_last_name': child_last_name or "",
+                'child_dob': child_dob,
                 'email': email,
                 'phone': phone,
-                'address': address,
-                'emergency_contact': emergency_contact,
-                'is_active': True
+                'alternate_phone': alternate_phone,
+                'address_line1': address_line1 or "",
+                'address_line2': address_line2 or "",
+                'city': city or "",
+                'state': state or "",
+                'postal_code': postal_code or "",
+                'country': country or 'India',
+                'relation_to_child': relation_to_child or "",
+                'is_verified': False
             }
             
             profile_response = client.table('parents').insert(profile_data).execute()

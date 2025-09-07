@@ -15,6 +15,7 @@ import { LearnersList } from './components/therapist/LearnersList';
 import { MyLearners } from './components/therapist/MyLearners';
 import { ParentDashboard } from './components/parent/ParentDashboard';
 import { HomeworkManager } from './components/parent/HomeworkManager';
+import { ParentRegistrationPage } from './components/parent/ParentRegistrationPage';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
 import { SessionPlanning } from './components/sessions/SessionPlanning';
 
@@ -124,6 +125,7 @@ const AppLayout: React.FC = () => {
       <Route path="/home" element={<HomePage />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegistrationPage />} />
+      <Route path="/parent-registration" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ParentRegistrationPage />} />
       
       {/* Protected Dashboard Routes - Only accessible when authenticated */}
       {isAuthenticated ? (

@@ -53,27 +53,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profileData = await response.json();
       
       // Update user with profile information
-      if (user) {
-        const updatedUser: User = {
-          ...user,
-          name: profileData.name || profileData.email, // Use name from /api/me response
-          // Add other profile fields as needed
-        };
-        
-        setUser(updatedUser);
-        localStorage.setItem('user_data', JSON.stringify(updatedUser));
-      }
+      setUser(currentUser => {
+        if (currentUser) {
+          const updatedUser: User = {
+            ...currentUser,
+            name: profileData.name || profileData.email, // Use name from /api/me response
+            // Add other profile fields as needed
+          };
+          
+          localStorage.setItem('user_data', JSON.stringify(updatedUser));
+          return updatedUser;
+        }
+        return currentUser;
+      });
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
     }
-  }, [user]); // Only depend on user
+  }, []); // Remove user dependency to prevent infinite loop
 
-  // Fetch profile data when component mounts if user exists
+  // Fetch profile data when component mounts if user exists and name is not set
   React.useEffect(() => {
     if (user && user.name === user.email) {
       fetchUserProfile();
     }
-  }, [user, fetchUserProfile]); // Include all dependencies
+  }, [user?.id, fetchUserProfile]); // Only depend on user.id to prevent infinite loop
 
   const login = async (email: string, password: string) => {
     try {

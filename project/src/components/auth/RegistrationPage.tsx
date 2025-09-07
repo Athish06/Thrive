@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ParentRegistrationForm from '../parent/ParentRegistrationForm';
 
 const quotes = [
   "The potential of a child is the most intriguing and stimulating in all creation.",
@@ -27,6 +28,7 @@ export const RegistrationPage: React.FC = () => {
   const [currentQuote, setCurrentQuote] = useState('');
   const [characterState, setCharacterState] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [showParentForm, setShowParentForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -113,10 +115,29 @@ export const RegistrationPage: React.FC = () => {
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+
+    // Show parent registration form when parent role is selected
+    if (name === 'role' && value === 'parent') {
+      setShowParentForm(true);
+    }
   };
 
   const handleLoginClick = () => {
     navigate('/login');
+  };
+
+  const handleParentFormSuccess = () => {
+    navigate('/login', { 
+      state: { 
+        registrationSuccess: true, 
+        message: 'Parent account created successfully! Please log in and wait for verification.',
+      } 
+    });
+  };
+
+  const handleParentFormClose = () => {
+    setShowParentForm(false);
+    setFormData(prev => ({ ...prev, role: 'therapist' })); // Reset to therapist if they close
   };
 
   return (
@@ -669,6 +690,18 @@ export const RegistrationPage: React.FC = () => {
                     />
                     <span>Parent</span>
                   </label>
+                  <div className="text-center mt-4">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/parent-registration')}
+                      className="inline-flex items-center px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+                    >
+                      Complete Parent Registration
+                    </button>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Comprehensive parent registration with child verification
+                    </p>
+                  </div>
                   <label className="radio-option">
                     <input
                       type="radio"
@@ -863,6 +896,14 @@ export const RegistrationPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Parent Registration Form Modal */}
+      {showParentForm && (
+        <ParentRegistrationForm
+          onSuccess={handleParentFormSuccess}
+          onClose={handleParentFormClose}
+        />
+      )}
     </>
   );
 };
