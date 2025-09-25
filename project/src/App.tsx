@@ -15,6 +15,7 @@ import { LearnersList } from './components/therapist/LearnersList';
 import { MyLearners } from './components/therapist/MyLearners';
 import { ParentDashboard } from './components/parent/ParentDashboard';
 import { HomeworkManager } from './components/parent/HomeworkManager';
+import ProgressReport from './components/parent/ProgressReport';
 import { ParentRegistrationPage } from './components/parent/ParentRegistrationPage';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
 import { SessionPlanning } from './components/sessions/SessionPlanning';
@@ -88,10 +89,7 @@ const DashboardLayout: React.FC = () => {
             path="/progress" 
             element={
               <ProtectedRoute requiredRole="parent">
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-foreground mb-4">Progress Reports</h2>
-                  <p className="text-muted-foreground">Detailed progress reports coming soon!</p>
-                </div>
+                <ProgressReport />
               </ProtectedRoute>
             } 
           />

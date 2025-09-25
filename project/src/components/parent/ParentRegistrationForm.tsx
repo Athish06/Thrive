@@ -126,54 +126,89 @@ export const ParentRegistrationForm: React.FC<ParentRegistrationFormProps> = ({
   const handleSubmit = async () => {
     if (!validateStep(4)) return;
 
-      setIsSubmitting(true);
-      try {
-        // Use the same endpoint as the existing registration
-        const response = await fetch('http://localhost:8000/api/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            // Basic user account fields (same as existing registration)
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            password: formData.password,
-            role: 'parent',
-            phone: formData.phone,
-            address: `${formData.addressLine1}${formData.addressLine2 ? ', ' + formData.addressLine2 : ''}, ${formData.city}, ${formData.state} ${formData.postalCode}`,
-            emergencyContact: formData.alternatePhone || '',
-            
-            // Additional parent-specific fields for future database enhancement
-            parentFirstName: formData.firstName,
-            parentLastName: formData.lastName,
-            childFirstName: formData.childFirstName,
-            childLastName: formData.childLastName,
-            childDob: formData.childDob,
-            relationToChild: formData.relationToChild,
-            alternatePhone: formData.alternatePhone,
-            addressLine1: formData.addressLine1,
-            addressLine2: formData.addressLine2,
-            city: formData.city,
-            state: formData.state,
-            postalCode: formData.postalCode,
-            country: formData.country
-          }),
-        });
+    setIsSubmitting(true);
+    try {
+      // Step 1: Verify child details to get child_id
+      console.log('Verifying child details...');
+      const verifyResponse = await fetch('http://localhost:8000/api/verify-child', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          childFirstName: formData.childFirstName,
+          childLastName: formData.childLastName,
+          childDob: formData.childDob
+        }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Registration failed');
-        }
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json();
+        throw new Error(errorData.detail || 'Child verification failed. Please check the child details.');
+      }
 
-        const userData = await response.json();
-        console.log('Parent registered successfully:', userData);      // Navigate to login page with success notification (same as existing)
+      const verifyData = await verifyResponse.json();
+      const childId = verifyData.child_id;
+      
+      if (!childId) {
+        throw new Error('No matching child found in our records. Please verify the child details or contact support.');
+      }
+
+      console.log('Child verified successfully. Child ID:', childId);
+
+      // Step 2: Register parent with child_id
+      const response = await fetch('http://localhost:8000/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // Basic user account fields
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          role: 'parent',
+          phone: formData.phone,
+          address: `${formData.addressLine1}${formData.addressLine2 ? ', ' + formData.addressLine2 : ''}, ${formData.city}, ${formData.state} ${formData.postalCode}`,
+          emergencyContact: formData.alternatePhone || '',
+          
+          // Parent-specific fields with verified child_id
+          parentFirstName: formData.firstName,
+          parentLastName: formData.lastName,
+          childFirstName: formData.childFirstName,
+          childLastName: formData.childLastName,
+          childDob: formData.childDob,
+          childId: childId, // Use child_id instead of student_id
+          relationToChild: formData.relationToChild,
+          
+          // Additional contact details
+          alternatePhone: formData.alternatePhone,
+          addressLine1: formData.addressLine1,
+          addressLine2: formData.addressLine2,
+          city: formData.city,
+          state: formData.state,
+          postalCode: formData.postalCode,
+          country: formData.country
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Registration failed');
+      }
+
+      const userData = await response.json();
+      console.log('Parent registered successfully:', userData);
+      
+      // Navigate to login page with success notification
       onSuccess?.();
       onClose?.();
     } catch (error) {
       console.error('Registration failed:', error);
-      setErrors({ email: error instanceof Error ? error.message : 'Registration failed. Please try again.' });
+      setErrors({ 
+        email: error instanceof Error ? error.message : 'Registration failed. Please try again.' 
+      });
     } finally {
       setIsSubmitting(false);
     }

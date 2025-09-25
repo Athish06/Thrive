@@ -13,7 +13,7 @@ def create_user(email: str, password: str, role: str, first_name: str = None, la
                 # Additional parent fields
                 parent_first_name: str = None, parent_last_name: str = None,
                 child_first_name: str = None, child_last_name: str = None,
-                child_dob: str = None, relation_to_child: str = None,
+                child_dob: str = None, child_id: int = None, relation_to_child: str = None,
                 alternate_phone: str = None, address_line1: str = None,
                 address_line2: str = None, city: str = None, state: str = None,
                 postal_code: str = None, country: str = None) -> dict:
@@ -87,6 +87,7 @@ def create_user(email: str, password: str, role: str, first_name: str = None, la
                 'child_first_name': child_first_name or "",
                 'child_last_name': child_last_name or "",
                 'child_dob': child_dob,
+                'child_id': child_id,  # Add child ID to parent profile
                 'email': email,
                 'phone': phone,
                 'alternate_phone': alternate_phone,
