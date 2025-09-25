@@ -517,3 +517,100 @@ async def remove_activity_from_session(session_activity_id: int, session_id: int
     except Exception as e:
         logger.error(f"Error removing activity from session: {str(e)}")
         raise Exception(f"Database error: {str(e)}")
+
+async def get_completed_sessions_by_child_id(child_id: int, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    """
+    Get all completed sessions for a specific child
+    """
+    try:
+        logger.info(f"Fetching completed sessions for child_id: {child_id}, limit: {limit}, offset: {offset}")
+        supabase = get_supabase_client()
+        
+        # Query sessions where child_id matches child_id and status is 'completed'
+        result = supabase.table('sessions').select(
+            '*'
+        ).eq('child_id', child_id).eq('status', 'completed').order('session_date', desc=True).limit(limit).range(offset, offset + limit - 1).execute()
+        
+        # Return the raw data with some field mapping for frontend compatibility
+        sessions = []
+        for session_data in result.data:
+            try:
+                # Map database fields to frontend expected fields
+                mapped_session = {
+                    'id': session_data['id'],
+                    'therapist_id': session_data['therapist_id'],
+                    'student_id': session_data['child_id'],  # Map child_id to student_id for frontend compatibility
+                    'session_date': session_data['session_date'],
+                    'start_time': session_data['start_time'],
+                    'end_time': session_data['end_time'],
+                    'session_type': session_data.get('session_type', 'therapy'),
+                    'status': session_data['status'],
+                    'total_planned_activities': session_data.get('total_planned_activities', 0),
+                    'completed_activities': session_data.get('completed_activities', 0),
+                    'estimated_duration_minutes': session_data.get('estimated_duration_minutes'),
+                    'actual_duration_minutes': session_data.get('actual_duration_minutes'),
+                    'prerequisite_completion_required': session_data.get('prerequisite_completion_required', False),
+                    'therapist_notes': session_data.get('therapist_notes'),
+                    'parent_feedback': session_data.get('parent_feedback'),
+                    'created_at': session_data['created_at'],
+                    'updated_at': session_data['updated_at'],
+                    'student_name': None,
+                    'therapist_name': None
+                }
+                
+                sessions.append(mapped_session)
+            except Exception as parse_error:
+                logger.error(f"Error parsing session data: {parse_error}")
+                continue
+        
+        logger.info(f"Found {len(sessions)} completed sessions for child_id: {child_id}")
+        return sessions
+        
+    except Exception as e:
+        logger.error(f"Error fetching completed sessions by child_id: {str(e)}")
+        raise Exception(f"Database error: {str(e)}")
+
+# Feedback-related models and functions
+class SessionFeedbackCreate(BaseModel):
+    session_id: int
+    feedback: str
+
+async def update_session_parent_feedback(session_id: int, parent_feedback: str) -> bool:
+    """Update parent feedback for a specific session"""
+    try:
+        supabase = get_supabase_client()
+        
+        # Update the session with parent feedback
+        result = supabase.table('sessions').update({
+            'parent_feedback': parent_feedback,
+            'updated_at': datetime.now().isoformat()
+        }).eq('id', session_id).execute()
+        
+        if result.data:
+            logger.info(f"Successfully updated parent feedback for session {session_id}")
+            return True
+        else:
+            logger.error(f"No session found with ID {session_id}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error updating parent feedback for session {session_id}: {str(e)}")
+        raise Exception(f"Database error: {str(e)}")
+
+async def get_session_for_parent_verification(session_id: int) -> Optional[Dict[str, Any]]:
+    """Get session data for parent verification (without therapist restriction)"""
+    try:
+        supabase = get_supabase_client()
+        
+        result = supabase.table('sessions').select(
+            'id, child_id, session_date, status'
+        ).eq('id', session_id).execute()
+        
+        if not result.data:
+            return None
+            
+        return result.data[0]
+        
+    except Exception as e:
+        logger.error(f"Error fetching session for parent verification {session_id}: {str(e)}")
+        raise Exception(f"Database error: {str(e)}")

@@ -9,6 +9,7 @@ from students.students import get_all_students, get_student_by_id, get_students_
 from notes.notes import get_notes_by_date_and_therapist, create_session_note, get_notes_with_dates_for_therapist, SessionNoteCreate, SessionNoteResponse
 from sessions.sessions import (
     create_session, get_sessions_by_therapist, get_session_by_id, update_session, delete_session,
+    get_completed_sessions_by_child_id, update_session_parent_feedback, get_session_for_parent_verification, SessionFeedbackCreate,
     add_activity_to_session, get_session_activities, get_available_student_activities, 
     remove_activity_from_session, SessionCreate, SessionUpdate, SessionResponse,
     SessionActivityCreate, SessionActivityUpdate, SessionActivityResponse, StudentActivityResponse
@@ -65,6 +66,7 @@ class UserRegistration(BaseModel):
     childFirstName: Optional[str] = None
     childLastName: Optional[str] = None
     childDob: Optional[str] = None
+    childId: Optional[int] = None  # Add child ID field
     relationToChild: Optional[str] = None
     alternatePhone: Optional[str] = None
     addressLine1: Optional[str] = None
@@ -221,6 +223,7 @@ async def register_user(user_data: UserRegistration):
             child_first_name=user_data.childFirstName,
             child_last_name=user_data.childLastName,
             child_dob=user_data.childDob,
+            child_id=user_data.childId,  # Add child ID from verification
             relation_to_child=user_data.relationToChild,
             alternate_phone=user_data.alternatePhone,
             address_line1=user_data.addressLine1,
@@ -343,6 +346,139 @@ async def update_user_profile(
             raise HTTPException(status_code=400, detail="Invalid user role")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to update profile")
+
+@app.get("/api/parent-details/{user_id}")
+async def get_parent_details_by_id(
+    user_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get parent details by user ID
+    Only accessible by the parent themselves
+    """
+    try:
+        # Ensure the requesting user can only access their own details
+        if current_user["role"] != "parent" or current_user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied. You can only access your own details.")
+        
+        profile = get_parent_profile(user_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Parent profile not found")
+        
+        return {
+            "id": profile.get("id"),
+            "user_id": profile.get("user_id"),
+            "parent_first_name": profile.get("parent_first_name"),
+            "parent_last_name": profile.get("parent_last_name"),
+            "child_first_name": profile.get("child_first_name"),
+            "child_last_name": profile.get("child_last_name"),
+            "child_dob": profile.get("child_dob"),
+            "child_id": profile.get("child_id"),  # Return child_id from parent profile
+            "email": profile.get("email"),
+            "phone": profile.get("phone"),
+            "alternate_phone": profile.get("alternate_phone"),
+            "address_line1": profile.get("address_line1"),
+            "address_line2": profile.get("address_line2"),
+            "city": profile.get("city"),
+            "state": profile.get("state"),
+            "postal_code": profile.get("postal_code"),
+            "country": profile.get("country"),
+            "relation_to_child": profile.get("relation_to_child"),
+            "is_verified": profile.get("is_verified"),
+            "created_at": str(profile.get("created_at", ""))
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting parent details for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get parent details")
+
+@app.post("/api/verify-child")
+async def verify_child_details(child_data: dict):
+    """
+    Verify child details and return child_id
+    Used during parent registration
+    """
+    try:
+        # Import the verification function
+        from students.students import verify_child_in_database
+        
+        child_first_name = child_data.get("childFirstName")
+        child_last_name = child_data.get("childLastName") 
+        child_dob = child_data.get("childDob")
+        
+        if not all([child_first_name, child_last_name, child_dob]):
+            raise HTTPException(status_code=400, detail="All child details are required")
+        
+        # Verify child exists and get child_id
+        child_id = verify_child_in_database(child_first_name, child_last_name, child_dob)
+        
+        if not child_id:
+            raise HTTPException(
+                status_code=404, 
+                detail="No matching child found. Please verify the details."
+            )
+        
+        return {
+            "child_id": child_id,
+            "message": "Child verified successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying child: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify child details")
+
+@app.get("/api/children/{child_id}")
+async def get_child_by_id(
+    child_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get child details by child_id
+    Only accessible by parents who have this child_id in their profile
+    """
+    try:
+        # If user is therapist, allow access
+        if current_user["role"] == "therapist":
+            from students.students import get_student_by_id
+            child = get_student_by_id(child_id)
+            if not child:
+                raise HTTPException(status_code=404, detail="Child not found")
+            return child
+        
+        # If user is parent, verify they have access to this child
+        elif current_user["role"] == "parent":
+            # Get parent profile to check child_id
+            parent_profile = get_parent_profile(current_user["id"])
+            if not parent_profile:
+                raise HTTPException(status_code=404, detail="Parent profile not found")
+            
+            # Check if parent's child_id matches requested child_id
+            if parent_profile.get("child_id") != child_id:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Access denied. You can only view your own child's details."
+                )
+            
+            # Get child details
+            from students.students import get_student_by_id
+            child = get_student_by_id(child_id)
+            if not child:
+                raise HTTPException(status_code=404, detail="Child not found")
+            
+            return child
+        
+        else:
+            raise HTTPException(status_code=403, detail="Access denied. Invalid user role.")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching child {child_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch child details")
 
 @app.get("/api/test-auth")
 async def test_auth(current_user: dict = Depends(get_current_user)):
@@ -499,6 +635,74 @@ async def get_sessions(limit: int = 50, offset: int = 0, current_user: dict = De
     except Exception as e:
         logger.error(f"Error fetching sessions: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch sessions")
+
+@app.get("/api/parent-sessions")
+async def get_parent_sessions(limit: int = 50, offset: int = 0, current_user: dict = Depends(get_current_user)):
+    """Get completed sessions for parent's child"""
+    try:
+        # Ensure user is a parent
+        if current_user.get('role') != 'parent':
+            raise HTTPException(status_code=403, detail="Access denied. Only parents can access this endpoint.")
+        
+        # Get parent profile to find child_id
+        parent_profile = get_parent_profile(current_user['id'])
+        if not parent_profile:
+            raise HTTPException(status_code=404, detail="Parent profile not found")
+        
+        child_id = parent_profile.get('child_id')
+        if not child_id:
+            raise HTTPException(status_code=404, detail="No child associated with this parent account")
+        
+        # Fetch completed sessions for the child
+        sessions = await get_completed_sessions_by_child_id(child_id, limit, offset)
+        return sessions
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching parent sessions: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch sessions")
+
+@app.post("/api/session-feedback")
+async def submit_session_feedback(feedback_data: SessionFeedbackCreate, current_user: dict = Depends(get_current_user)):
+    """Submit or update parent feedback for a session"""
+    try:
+        # Ensure user is a parent
+        if current_user.get('role') != 'parent':
+            raise HTTPException(status_code=403, detail="Access denied. Only parents can submit feedback.")
+        
+        # Get parent profile to verify they own the session
+        parent_profile = get_parent_profile(current_user['id'])
+        if not parent_profile:
+            raise HTTPException(status_code=404, detail="Parent profile not found")
+        
+        child_id = parent_profile.get('child_id')
+        if not child_id:
+            raise HTTPException(status_code=404, detail="No child associated with this parent account")
+        
+        # Verify the session belongs to this parent's child
+        session = await get_session_for_parent_verification(feedback_data.session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+            
+        # Check if session belongs to parent's child (using child_id from sessions table)
+        session_child_id = session.get('child_id')
+        if session_child_id != child_id:
+            raise HTTPException(status_code=403, detail="You can only provide feedback for your child's sessions")
+        
+        # Update the session with parent feedback
+        success = await update_session_parent_feedback(feedback_data.session_id, feedback_data.feedback)
+        
+        if success:
+            return {"message": "Feedback submitted successfully", "session_id": feedback_data.session_id}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to submit feedback")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error submitting session feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit feedback")
 
 @app.get("/api/sessions/{session_id}", response_model=SessionResponse)
 async def get_session(session_id: int, current_user: dict = Depends(get_current_user)):

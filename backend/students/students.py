@@ -5,6 +5,105 @@ from db import get_supabase_client, format_supabase_response, handle_supabase_er
 
 logger = logging.getLogger(__name__)
 
+def verify_child_in_database(child_first_name: str, child_last_name: str, child_dob: str) -> Optional[int]:
+    """
+    Verify child details against the children table and return child_id if found
+    """
+    try:
+        client = get_supabase_client()
+        
+        # Query children table with exact match on name and DOB
+        response = client.table('children').select('id').match({
+            'first_name': child_first_name.strip(),
+            'last_name': child_last_name.strip(), 
+            'date_of_birth': child_dob
+        }).execute()
+        
+        handle_supabase_error(response)
+        children = format_supabase_response(response)
+        
+        if children and len(children) > 0:
+            return children[0]['id']
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error verifying child in database: {e}")
+        return None
+
+def get_student_by_id(child_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get child/student details by ID from children table
+    """
+    try:
+        client = get_supabase_client()
+        
+        # Query children table with therapist information
+        response = client.table('children').select(
+            """
+            id,
+            first_name,
+            last_name,
+            date_of_birth,
+            enrollment_date,
+            diagnosis,
+            status,
+            primary_therapist_id,
+            profile_details,
+            therapists!primary_therapist_id (
+                id,
+                first_name,
+                last_name
+            )
+            """
+        ).eq('id', child_id).execute()
+        
+        handle_supabase_error(response)
+        children = format_supabase_response(response)
+        
+        if not children or len(children) == 0:
+            return None
+        
+        child = children[0]
+        
+        # Calculate age from date_of_birth
+        age = None
+        if child.get('date_of_birth'):
+            birth_date = datetime.strptime(child['date_of_birth'], '%Y-%m-%d').date()
+            today = date.today()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        
+        # Get therapist info
+        therapist = child.get('therapists')
+        therapist_name = None
+        if therapist:
+            therapist_name = f"{therapist.get('first_name', '')} {therapist.get('last_name', '')}".strip()
+        
+        # Transform data to match expected format
+        return {
+            "id": child['id'],
+            "name": f"{child.get('first_name', '')} {child.get('last_name', '')}".strip(),
+            "first_name": child.get('first_name'),
+            "last_name": child.get('last_name'),
+            "age": age,
+            "date_of_birth": child.get('date_of_birth'),
+            "enrollment_date": child.get('enrollment_date'),
+            "diagnosis": child.get('diagnosis'),
+            "status": child.get('status'),
+            "primary_therapist": therapist_name,
+            "primary_therapist_id": child.get('primary_therapist_id'),
+            "profile_details": child.get('profile_details', {}),
+            # Add some default values for dashboard compatibility
+            "progressPercentage": 75,
+            "achievements": [],
+            "goals": ["Communication improvement", "Social skills development"],
+            "nextSession": None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting student by ID {child_id}: {e}")
+        return None
+
 def get_all_students() -> List[Dict[str, Any]]:
     """
     Fetch all students from the children table
